@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+
+<div class="container">
+
+<div class="sidebar">
+  <button onclick="addText()">Texto</button>
+  <button onclick="save()">Guardar</button>
+</div>
+
+<div class="main">
+  <input id="name" placeholder="Nombre tarjeta">
+
+  <div class="card">
+    <canvas id="canvas" width="600" height="350"></canvas>
+  </div>
+</div>
+
+</div>
+
+<script>
+const canvas = new fabric.Canvas('canvas');
+
+function addText(){
+  const t = new fabric.IText("Texto", { left:100, top:100 });
+  canvas.add(t);
+}
+
+async function save(){
+  const name = document.getElementById("name").value;
+  const template = JSON.stringify(canvas.toJSON());
+
+  await fetch("/create", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ name, template })
+  });
+
+  alert("Guardado");
+}
+</script>
