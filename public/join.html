@@ -5,7 +5,7 @@
 <div class="main">
 
 <input id="cardName" placeholder="Nombre tarjeta">
-<button onclick="load()">Cargar</button>
+<button onclick="loadCard()">Cargar</button>
 
 <canvas id="canvas" width="600" height="350"></canvas>
 
@@ -23,13 +23,26 @@ let currentCard = null;
 let isUpdating = false;
 
 // cargar tarjeta
-async function load(){
-  const name = cardName.value;
+async function loadCard(){
+  const name = cardName.value.trim();
+  if (!name) {
+    alert("Escribe un nombre de tarjeta");
+    return;
+  }
 
-  const res = await fetch("/card/" + name);
+  const res = await fetch("/card/" + encodeURIComponent(name));
+  if (!res.ok) {
+    alert("No se pudo cargar la tarjeta");
+    return;
+  }
+
   const data = await res.json();
 
-  canvas.loadFromJSON(data.template, canvas.renderAll.bind(canvas));
+  isUpdating = true;
+  canvas.loadFromJSON(data.template, () => {
+    canvas.renderAll();
+    isUpdating = false;
+  });
 
   currentCard = name;
   socket.emit("join-card", name);
@@ -44,12 +57,24 @@ function addMessage(){
 // enviar cambios
 canvas.on("object:modified", send);
 canvas.on("object:added", send);
+canvas.on("object:removed", send);
+
+async function persistCard(data) {
+  if (!currentCard) return;
+
+  await fetch("/join", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: currentCard, template: data })
+  });
+}
 
 function send(){
-  if(isUpdating) return;
+  if (isUpdating || !currentCard) return;
 
   const data = JSON.stringify(canvas.toJSON());
   socket.emit("canvas-update", { cardName: currentCard, data });
+  persistCard(data);
 }
 
 // recibir cambios
@@ -59,10 +84,14 @@ socket.on("canvas-update", (data)=>{
     canvas.renderAll();
     isUpdating = false;
   });
+  persistCard(data);
 });
 
 // upload imagen
 upload.onchange = function(e){
+  const file = e.target.files[0];
+  if (!file) return;
+
   const reader = new FileReader();
 
   reader.onload = function(f){
@@ -72,6 +101,6 @@ upload.onchange = function(e){
     });
   };
 
-  reader.readAsDataURL(e.target.files[0]);
+  reader.readAsDataURL(file);
 };
 </script>

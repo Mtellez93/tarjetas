@@ -1,19 +1,32 @@
+<link rel="stylesheet" href="styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 
-<input id="name">
-<button onclick="load()">Ver</button>
+<div class="main">
+  <input id="name" placeholder="Nombre tarjeta">
+  <button onclick="loadCard()">Ver</button>
 
-<canvas id="canvas" width="600" height="350"></canvas>
+  <canvas id="canvas" width="600" height="350"></canvas>
 
-<button onclick="download()">Descargar</button>
+  <button onclick="download()">Descargar</button>
+</div>
 
 <script>
 const canvas = new fabric.Canvas('canvas');
 
-async function load(){
-  const res = await fetch("/card/" + name.value);
-  const data = await res.json();
+async function loadCard(){
+  const cardName = name.value.trim();
+  if (!cardName) {
+    alert("Escribe un nombre de tarjeta");
+    return;
+  }
 
+  const res = await fetch("/card/" + encodeURIComponent(cardName));
+  if (!res.ok) {
+    alert("No se encontró la tarjeta");
+    return;
+  }
+
+  const data = await res.json();
   canvas.loadFromJSON(data.template, canvas.renderAll.bind(canvas));
 }
 
