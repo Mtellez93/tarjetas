@@ -1,0 +1,28 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+
+<input id="name">
+<button onclick="load()">Ver</button>
+
+<canvas id="canvas" width="600" height="350"></canvas>
+
+<button onclick="download()">Descargar</button>
+
+<script>
+const canvas = new fabric.Canvas('canvas');
+
+async function load(){
+  const res = await fetch("/card/" + name.value);
+  const data = await res.json();
+
+  canvas.loadFromJSON(data.template, canvas.renderAll.bind(canvas));
+}
+
+function download(){
+  const url = canvas.toDataURL({ multiplier:2 });
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "tarjeta.png";
+  a.click();
+}
+</script>
