@@ -1,0 +1,77 @@
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+
+<div class="main">
+
+<input id="cardName" placeholder="Nombre tarjeta">
+<button onclick="load()">Cargar</button>
+
+<canvas id="canvas" width="600" height="350"></canvas>
+
+<input type="file" id="upload">
+
+<button onclick="addMessage()">Mensaje</button>
+
+</div>
+
+<script>
+const canvas = new fabric.Canvas('canvas');
+const socket = io();
+
+let currentCard = null;
+let isUpdating = false;
+
+// cargar tarjeta
+async function load(){
+  const name = cardName.value;
+
+  const res = await fetch("/card/" + name);
+  const data = await res.json();
+
+  canvas.loadFromJSON(data.template, canvas.renderAll.bind(canvas));
+
+  currentCard = name;
+  socket.emit("join-card", name);
+}
+
+// agregar mensaje
+function addMessage(){
+  const t = new fabric.IText("Mensaje", { left:100, top:100 });
+  canvas.add(t);
+}
+
+// enviar cambios
+canvas.on("object:modified", send);
+canvas.on("object:added", send);
+
+function send(){
+  if(isUpdating) return;
+
+  const data = JSON.stringify(canvas.toJSON());
+  socket.emit("canvas-update", { cardName: currentCard, data });
+}
+
+// recibir cambios
+socket.on("canvas-update", (data)=>{
+  isUpdating = true;
+  canvas.loadFromJSON(data, ()=>{
+    canvas.renderAll();
+    isUpdating = false;
+  });
+});
+
+// upload imagen
+upload.onchange = function(e){
+  const reader = new FileReader();
+
+  reader.onload = function(f){
+    fabric.Image.fromURL(f.target.result, img=>{
+      img.scaleToWidth(200);
+      canvas.add(img);
+    });
+  };
+
+  reader.readAsDataURL(e.target.files[0]);
+};
+</script>
